@@ -48,7 +48,7 @@ export async function handleCommit(options) {
     // Step 1: Stage changes (if --all is passed)
     if (options.all) {
       await git.add(".");
-      console.log(chalk.blue(LOG_MESSAGES.STAGING_CHANGES));
+      console.log(chalk.hex("#DAA520")(LOG_MESSAGES.STAGING_CHANGES));
     }
 
     // Step 2: Check for staged changes
@@ -71,7 +71,7 @@ export async function handleCommit(options) {
 
     while (!confirmed) {
       const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
-      console.log(chalk.blue(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
+      console.log(chalk.hex("#DAA520")(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
       commitMessage = await generateCommitMessage(diff);
 
       confirmed = await confirmCommit(commitMessage);

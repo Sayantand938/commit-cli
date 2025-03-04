@@ -3,7 +3,7 @@
 // Constants for prompt messages
 export const PROMPT_MESSAGES = {
   CONFIRM_COMMIT:
-    'Use this commit message?"%s"\nPress "Y" to confirm or "N" to regenerate.',
+    'Use this commit message?"%s"Press "Y" to confirm or "N" to regenerate.',
 };
 
 // Constants for log messages
