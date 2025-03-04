@@ -83,7 +83,6 @@ export async function handleCommit(options) {
 
     // Step 4: Commit changes
     await git.commit(commitMessage);
-    console.log(chalk.green(LOG_MESSAGES.COMMIT_SUCCESS));
   } catch (error) {
     console.error(
       chalk.red(`${LOG_MESSAGES.ERROR_DURING_COMMIT} ${error.message}`)
