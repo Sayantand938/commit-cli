@@ -1,10 +1,7 @@
+// src/utils/prompts.js
 import inquirer from "inquirer";
-
-// Constants for prompt messages
-const PROMPT_MESSAGES = {
-  CONFIRM_COMMIT:
-    'Use this commit message?\n"%s"\nPress "Y" to confirm or "N" to regenerate.',
-};
+import chalk from "chalk";
+import { PROMPT_MESSAGES } from "../constants.js";
 
 /**
  * Prompts the user to confirm the generated commit message.
@@ -25,6 +22,6 @@ export async function confirmCommit(message) {
     return confirm;
   } catch (error) {
     console.error(chalk.red(`Error during confirmation: ${error.message}`));
-    throw error;
+    throw error; // Re-throw the error for consistent handling
   }
 }

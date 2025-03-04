@@ -8,7 +8,6 @@
     "commit-cli": "bin/cli.js"
   },
   "scripts": {
-    "start": "node bin/cli.js",
     "lint": "eslint .",
     "test": "echo \"No tests yet\" && exit 0"
   },
@@ -23,14 +22,14 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
-    "dotenv": "^16.4.7",
-    "openai": "^4.86.1",
-    "simple-git": "^3.27.0",
-    "inquirer": "^12.4.2"
+    "chalk": "^5.3.0",
+    "commander": "^13.0.0",
+    "dotenv": "^16.4.1",
+    "inquirer": "^9.0.0",
+    "openai": "^4.24.7",
+    "simple-git": "^3.22.0"
   },
   "devDependencies": {
-    "eslint": "^9.21.0"
+    "eslint": "^8.56.0"
   }
 }

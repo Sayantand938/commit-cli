@@ -1,53 +1,67 @@
+// src/commands/commit.js
 import dotenv from "dotenv";
 import chalk from "chalk";
 import simpleGit from "simple-git";
 import OpenAI from "openai";
 import { confirmCommit } from "../utils/prompts.js";
+import { LOG_MESSAGES } from "../constants.js";
 
 // Load environment variables
 dotenv.config();
 
-// Validate environment variables
-if (!process.env.GEMINI_API_KEY) {
+// Initialize Git client
+const git = simpleGit();
+
+// Initialize OpenAI client
+let apiKey = process.env.GEMINI_API_KEY;
+let baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/"; // Default to Gemini base URL
+let model = process.env.AI_COMMIT_MODEL || "gemini-2.0-flash"; // Use gemini-pro as default
+
+if (!apiKey) {
+  apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey) {
+    baseURL = undefined; // Use the default OpenAI base URL
+    model = process.env.AI_COMMIT_MODEL || "gpt-4o-mini"; // If it's an OpenAI key, default to a standard OpenAI model
+  }
+}
+
+if (!apiKey) {
   console.error(
-    chalk.red("Error: GEMINI_API_KEY is not set in the .env file.")
+    chalk.red(
+      "Error: Neither GEMINI_API_KEY nor OPENAI_API_KEY is set in the .env file."
+    )
   );
   process.exit(1);
 }
 
-// Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  apiKey,
+  baseURL, // Use the dynamically set baseURL
 });
-
-// Initialize Git client
-const git = simpleGit();
-
-// Constants for log messages
-const LOG_MESSAGES = {
-  STAGING_CHANGES: "Staging all changes...",
-  NO_CHANGES_TO_COMMIT: "No changes to commit.",
-  GENERATING_COMMIT_MESSAGE: "Generating commit message with AI...",
-  REGENERATING_COMMIT_MESSAGE: "Regenerating commit message...",
-  COMMIT_SUCCESS: "✔ Commit created successfully!",
-  ERROR_DURING_COMMIT: "Error during commit process:",
-};
 
 /**
  * Handles the `commit` command.
- * Auto-stages changes, generates a commit message using AI, and commits the changes.
+ * Auto-stages changes (optional), generates a commit message, and commits.
  */
-export async function handleCommit() {
+export async function handleCommit(options) {
   try {
-    // Step 1: Auto-stage all changes
-    await git.add(".");
-    console.log(chalk.blue(LOG_MESSAGES.STAGING_CHANGES));
+    // Step 1: Stage changes (if --all is passed)
+    if (options.all) {
+      await git.add(".");
+      console.log(chalk.blue(LOG_MESSAGES.STAGING_CHANGES));
+    }
 
-    // Step 2: Get staged changes
+    // Step 2: Check for staged changes
     const status = await git.status();
-    if (!status.staged.length) {
+    if (!status.files.length) {
+      // Check for ANY changes (staged OR unstaged if using -a)
       console.log(chalk.yellow(LOG_MESSAGES.NO_CHANGES_TO_COMMIT));
+      return;
+    }
+    const stagedChanges = status.staged;
+
+    if (!stagedChanges.length && !options.all) {
+      console.log(chalk.yellow(LOG_MESSAGES.NO_STAGED_CHANGES_TO_COMMIT));
       return;
     }
 
@@ -56,11 +70,10 @@ export async function handleCommit() {
     let commitMessage;
 
     while (!confirmed) {
-      const diff = await git.diff(["--staged"]);
+      const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
       console.log(chalk.blue(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
       commitMessage = await generateCommitMessage(diff);
 
-      // Confirm the commit message
       confirmed = await confirmCommit(commitMessage);
 
       if (!confirmed) {
@@ -87,7 +100,7 @@ export async function handleCommit() {
 async function generateCommitMessage(diff) {
   try {
     const response = await openai.chat.completions.create({
-      model: "gemini-2.0-flash",
+      model: model, // Use the configured model
       messages: [
         {
           role: "system",
@@ -97,19 +110,19 @@ async function generateCommitMessage(diff) {
             "- Types: feat (✨), fix (🐛), docs (📚), style (🎨), refactor (🛠️), test (✅), chore (🔧)\n" +
             "- Scope is optional but should describe the affected part of the codebase.\n" +
             "- Description should be concise and written in the imperative mood.\n" +
-            "- Include an emoji corresponding to the type for better readability.\n" +
+            "- Consider adding emojis for better readability.\n" +
             "- Example: ✨ feat(auth): Add login functionality\n" +
-            "- Avoid unnecessary details or overly long descriptions.",
+            "Keep it brief!",
         },
         {
           role: "user",
-          content: `Generate a concise Git commit message for the following changes:\n\n${diff}`,
+          content: `Generate a Git commit message for the following changes:\n\n${diff}`,
         },
       ],
     });
 
     if (!response.choices || !response.choices[0].message.content) {
-      throw new Error("Invalid response from Gemini API.");
+      throw new Error("Invalid response from Gemini API. No content returned.");
     }
 
     return response.choices[0].message.content.trim();
@@ -117,6 +130,6 @@ async function generateCommitMessage(diff) {
     console.error(
       chalk.red(`Error generating commit message: ${error.message}`)
     );
-    throw error;
+    throw error; // Re-throw for consistent error handling
   }
 }
