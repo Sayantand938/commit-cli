@@ -5,6 +5,7 @@ import simpleGit from "simple-git";
 import OpenAI from "openai";
 import { confirmCommit } from "../utils/prompts.js";
 import { LOG_MESSAGES } from "../constants.js";
+import boxen from "boxen";
 
 // Load environment variables
 dotenv.config();
@@ -48,7 +49,14 @@ export async function handleCommit(options) {
     // Step 1: Stage changes (if --all is passed)
     if (options.all) {
       await git.add(".");
-      console.log(chalk.hex("#DAA520")(LOG_MESSAGES.STAGING_CHANGES));
+      console.log(
+        boxen(chalk.hex("#DAA520")(LOG_MESSAGES.STAGING_CHANGES), {
+          padding: 1,
+          margin: 1,
+          borderStyle: "round",
+          borderColor: "yellow",
+        })
+      );
     }
 
     // Step 2: Check for staged changes
@@ -71,7 +79,14 @@ export async function handleCommit(options) {
 
     while (!confirmed) {
       const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
-      console.log(chalk.hex("#DAA520")(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
+      console.log(
+        boxen(chalk.hex("#DAA520")(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE), {
+          padding: 1,
+          margin: 1,
+          borderStyle: "round",
+          borderColor: "yellow",
+        })
+      );
       commitMessage = await generateCommitMessage(diff);
 
       confirmed = await confirmCommit(commitMessage);

@@ -2,6 +2,7 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { PROMPT_MESSAGES } from "../constants.js";
+import boxen from "boxen";
 
 /**
  * Prompts the user to confirm the generated commit message.
@@ -14,7 +15,12 @@ export async function confirmCommit(message) {
       {
         type: "confirm",
         name: "confirm",
-        message: PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", message),
+        message: boxen(PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", message), {
+          padding: 1,
+          margin: 1,
+          borderStyle: "round",
+          borderColor: "yellow",
+        }),
         default: true,
       },
     ]);
