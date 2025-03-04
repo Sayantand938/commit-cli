@@ -5,6 +5,7 @@ import simpleGit from "simple-git";
 import OpenAI from "openai";
 import { confirmCommit } from "../utils/prompts.js";
 import { LOG_MESSAGES } from "../constants.js";
+import ora from "ora"; // Import ora
 
 // Load environment variables
 dotenv.config();
@@ -44,19 +45,19 @@ const openai = new OpenAI({
  * Auto-stages changes (optional), generates a commit message, and commits.
  */
 export async function handleCommit(options) {
+  const spinner = ora(); // Create a spinner instance
+
   try {
     // Step 1: Stage changes (if --all is passed)
     if (options.all) {
+      spinner.start(chalk.yellow(LOG_MESSAGES.STAGING_CHANGES));
       await git.add(".");
-      console.log(
-        "\n" + chalk.hex("#DAA520")(LOG_MESSAGES.STAGING_CHANGES) + "\n"
-      );
+      spinner.succeed(chalk.green(LOG_MESSAGES.STAGING_CHANGES));
     }
 
     // Step 2: Check for staged changes
     const status = await git.status();
     if (!status.files.length) {
-      // Check for ANY changes (staged OR unstaged if using -a)
       console.log(chalk.yellow(LOG_MESSAGES.NO_CHANGES_TO_COMMIT));
       return;
     }
@@ -73,12 +74,9 @@ export async function handleCommit(options) {
 
     while (!confirmed) {
       const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
-      console.log(
-        "\n" +
-          chalk.hex("#DAA520")(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE) +
-          "\n"
-      );
+      spinner.start(chalk.yellow(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
       commitMessage = await generateCommitMessage(diff);
+      spinner.succeed(chalk.green(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
 
       confirmed = await confirmCommit(commitMessage);
 
@@ -88,9 +86,11 @@ export async function handleCommit(options) {
     }
 
     // Step 4: Commit changes
+    spinner.start(chalk.yellow("Committing..."));
     await git.commit(commitMessage);
+    spinner.succeed(chalk.green(LOG_MESSAGES.COMMIT_SUCCESS));
   } catch (error) {
-    console.error(
+    spinner.fail(
       chalk.red(`${LOG_MESSAGES.ERROR_DURING_COMMIT} ${error.message}`)
     );
     process.exit(1);

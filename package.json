@@ -28,6 +28,7 @@
     "dotenv": "^16.4.1",
     "inquirer": "^9.0.0",
     "openai": "^4.24.7",
+    "ora": "^8.2.0",
     "simple-git": "^3.22.0"
   },
   "devDependencies": {

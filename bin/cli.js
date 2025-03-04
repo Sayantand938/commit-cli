@@ -9,6 +9,7 @@ import { handleCommit } from "../src/commands/commit.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import chalk from "chalk"; // Import chalk here
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

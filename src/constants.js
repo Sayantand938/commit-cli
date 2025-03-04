@@ -2,8 +2,7 @@
 
 // Constants for prompt messages
 export const PROMPT_MESSAGES = {
-  CONFIRM_COMMIT:
-    'Use this commit message?\n\n"%s"\n\nPress "Y" to confirm or "N" to regenerate.',
+  CONFIRM_COMMIT: "Use this commit message?\n\n%s", // Removed extra newlines, boxen handles this
 };
 
 // Constants for log messages
@@ -14,6 +13,6 @@ export const LOG_MESSAGES = {
     "No staged changes to commit. Stage changes or use the --all flag.",
   GENERATING_COMMIT_MESSAGE: "Generating commit message with AI...",
   REGENERATING_COMMIT_MESSAGE: "Regenerating commit message...",
-  COMMIT_SUCCESS: "✔ Commit created successfully!",
+  COMMIT_SUCCESS: "✔ Commit created successfully!", // Success message
   ERROR_DURING_COMMIT: "Error during commit process:",
 };

@@ -11,11 +11,21 @@ import boxen from "boxen";
  */
 export async function confirmCommit(message) {
   try {
+    const boxenOptions = {
+      padding: 1,
+      margin: 1,
+      borderStyle: "round",
+      borderColor: "green",
+      backgroundColor: "#222222", // Dark background
+    };
+
+    const formattedMessage = boxen(chalk.cyan(message), boxenOptions);
+
     const { confirm } = await inquirer.prompt([
       {
         type: "confirm",
         name: "confirm",
-        message: PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", message),
+        message: PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", formattedMessage), // Use formatted message
         default: true,
       },
     ]);
