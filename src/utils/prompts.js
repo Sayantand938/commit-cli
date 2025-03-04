@@ -15,12 +15,7 @@ export async function confirmCommit(message) {
       {
         type: "confirm",
         name: "confirm",
-        message: boxen(PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", message), {
-          padding: 1,
-          margin: 1,
-          borderStyle: "round",
-          borderColor: "yellow",
-        }),
+        message: PROMPT_MESSAGES.CONFIRM_COMMIT.replace("%s", message),
         default: true,
       },
     ]);
