@@ -45,14 +45,17 @@ const openai = new OpenAI({
  * Auto-stages changes (optional), generates a commit message, and commits.
  */
 export async function handleCommit(options) {
-  const spinner = ora(); // Create a spinner instance
-
   try {
     // Step 1: Stage changes (if --all is passed)
     if (options.all) {
-      spinner.start(chalk.yellow(LOG_MESSAGES.STAGING_CHANGES));
+      const spinner = ora({
+        text: chalk.yellow(LOG_MESSAGES.STAGING_CHANGES),
+        spinner: "dots", // Use a subtle spinner
+        succeedText: "", // Remove the checkmark on success
+      }).start();
       await git.add(".");
       spinner.succeed(chalk.green(LOG_MESSAGES.STAGING_CHANGES));
+      console.log(); // Add a newline for spacing
     }
 
     // Step 2: Check for staged changes
@@ -74,23 +77,36 @@ export async function handleCommit(options) {
 
     while (!confirmed) {
       const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
-      spinner.start(chalk.yellow(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
+      const spinner = ora({
+        text: chalk.yellow(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE),
+        spinner: "dots",
+        succeedText: "", // Remove the checkmark
+      }).start();
       commitMessage = await generateCommitMessage(diff);
       spinner.succeed(chalk.green(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
+      console.log(); // Add a newline for spacing
 
       confirmed = await confirmCommit(commitMessage);
 
       if (!confirmed) {
         console.log(chalk.yellow(LOG_MESSAGES.REGENERATING_COMMIT_MESSAGE));
+        console.log(); // Add a newline for spacing
       }
     }
 
     // Step 4: Commit changes
-    spinner.start(chalk.yellow("Committing..."));
+    const spinner = ora({
+      text: chalk.yellow("Committing..."),
+      spinner: "dots",
+      succeedText: "",
+    }).start();
+
     await git.commit(commitMessage);
-    spinner.succeed(chalk.green(LOG_MESSAGES.COMMIT_SUCCESS));
+    spinner.succeed(); // Keep succeed, but with no mark
+    console.log(); //Consistent spacing
+    console.log(chalk.green(LOG_MESSAGES.COMMIT_SUCCESS));
   } catch (error) {
-    spinner.fail(
+    console.error(
       chalk.red(`${LOG_MESSAGES.ERROR_DURING_COMMIT} ${error.message}`)
     );
     process.exit(1);
