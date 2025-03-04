@@ -4,8 +4,10 @@ import chalk from "chalk";
 import simpleGit from "simple-git";
 import OpenAI from "openai";
 import { confirmCommit } from "../utils/prompts.js";
-import { LOG_MESSAGES } from "../constants.js";
-import ora from "ora"; // Import ora
+import { LOG_MESSAGES, PROMPT_MESSAGES } from "../constants.js";
+import ora from "ora";
+import boxen from "boxen"; // Import boxen
+import inquirer from "inquirer";
 
 // Load environment variables
 dotenv.config();
@@ -13,16 +15,16 @@ dotenv.config();
 // Initialize Git client
 const git = simpleGit();
 
-// Initialize OpenAI client
+// Initialize OpenAI client (same as before - no changes here)
 let apiKey = process.env.GEMINI_API_KEY;
-let baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/"; // Default to Gemini base URL
-let model = process.env.AI_COMMIT_MODEL || "gemini-2.0-flash"; // Use gemini-pro as default
+let baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+let model = process.env.AI_COMMIT_MODEL || "gemini-2.0-flash";
 
 if (!apiKey) {
   apiKey = process.env.OPENAI_API_KEY;
   if (apiKey) {
-    baseURL = undefined; // Use the default OpenAI base URL
-    model = process.env.AI_COMMIT_MODEL || "gpt-4o-mini"; // If it's an OpenAI key, default to a standard OpenAI model
+    baseURL = undefined;
+    model = process.env.AI_COMMIT_MODEL || "gpt-4o-mini";
   }
 }
 
@@ -35,30 +37,22 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const openai = new OpenAI({
-  apiKey,
-  baseURL, // Use the dynamically set baseURL
-});
+const openai = new OpenAI({ apiKey, baseURL });
 
-/**
- * Handles the `commit` command.
- * Auto-stages changes (optional), generates a commit message, and commits.
- */
 export async function handleCommit(options) {
   try {
-    // Step 1: Stage changes (if --all is passed)
+    // --- Staging ---
     if (options.all) {
       const spinner = ora({
         text: chalk.yellow(LOG_MESSAGES.STAGING_CHANGES),
-        spinner: "dots", // Use a subtle spinner
-        succeedText: "", // Remove the checkmark on success
+        spinner: "dots",
+        succeedText: "",
       }).start();
       await git.add(".");
       spinner.succeed(chalk.green(LOG_MESSAGES.STAGING_CHANGES));
-      console.log(); // Add a newline for spacing
+      console.log(); // Spacing
     }
 
-    // Step 2: Check for staged changes
     const status = await git.status();
     if (!status.files.length) {
       console.log(chalk.yellow(LOG_MESSAGES.NO_CHANGES_TO_COMMIT));
@@ -71,39 +65,60 @@ export async function handleCommit(options) {
       return;
     }
 
-    // Step 3: Generate and confirm commit message
-    let confirmed = false;
-    let commitMessage;
-
-    while (!confirmed) {
-      const diff = await git.diff(["--staged"]); // Always use staged changes for the diff
-      const spinner = ora({
-        text: chalk.yellow(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE),
-        spinner: "dots",
-        succeedText: "", // Remove the checkmark
-      }).start();
-      commitMessage = await generateCommitMessage(diff);
-      spinner.succeed(chalk.green(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
-      console.log(); // Add a newline for spacing
-
-      confirmed = await confirmCommit(commitMessage);
-
-      if (!confirmed) {
-        console.log(chalk.yellow(LOG_MESSAGES.REGENERATING_COMMIT_MESSAGE));
-        console.log(); // Add a newline for spacing
-      }
-    }
-
-    // Step 4: Commit changes
+    // --- Generate Message ---
+    const diff = await git.diff(["--staged"]);
     const spinner = ora({
+      text: chalk.yellow(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE),
+      spinner: "dots",
+      succeedText: "",
+    }).start();
+    const commitMessage = await generateCommitMessage(diff);
+    spinner.succeed(chalk.green(LOG_MESSAGES.GENERATING_COMMIT_MESSAGE));
+    console.log(); // Spacing
+
+    // --- Display Message in Box ---
+    const boxenOptions = {
+      padding: 1,
+      margin: 1,
+      borderStyle: "round",
+      borderColor: "green",
+      backgroundColor: "#222222",
+      width: process.stdout.columns ? process.stdout.columns - 2 : 80, // Full width or default 80
+      align: "left", //left align
+    };
+    const formattedMessage = boxen(chalk.cyan(commitMessage), boxenOptions);
+    console.log(formattedMessage);
+    console.log(); //spacing
+
+    // --- Confirmation Prompt ---
+    let confirmed = await confirmCommit(commitMessage); //confirmCommit function changed
+    console.log(); //spacing
+    while (!confirmed) {
+      const spinner2 = ora({
+        text: chalk.yellow(LOG_MESSAGES.REGENERATING_COMMIT_MESSAGE),
+        spinner: "dots",
+        succeedText: "",
+      }).start();
+      const diff = await git.diff(["--staged"]);
+      commitMessage = await generateCommitMessage(diff);
+      spinner2.succeed(chalk.green(LOG_MESSAGES.REGENERATING_COMMIT_MESSAGE));
+      console.log(); //spacing
+
+      const formattedMessage = boxen(chalk.cyan(commitMessage), boxenOptions);
+      console.log(formattedMessage);
+      console.log(); //spacing
+
+      confirmed = await confirmCommit(commitMessage); //confirmCommit function changed
+      console.log(); //spacing
+    }
+    // --- Commit ---
+    const commitSpinner = ora({
       text: chalk.yellow("Committing..."),
       spinner: "dots",
       succeedText: "",
     }).start();
-
     await git.commit(commitMessage);
-    spinner.succeed(); // Keep succeed, but with no mark
-    console.log(); //Consistent spacing
+    commitSpinner.succeed();
     console.log(chalk.green(LOG_MESSAGES.COMMIT_SUCCESS));
   } catch (error) {
     console.error(
@@ -112,12 +127,6 @@ export async function handleCommit(options) {
     process.exit(1);
   }
 }
-
-/**
- * Generates a commit message using the Gemini API.
- * @param {string} diff - The Git diff of staged changes.
- * @returns {Promise<string>} - The generated commit message.
- */
 async function generateCommitMessage(diff) {
   try {
     const response = await openai.chat.completions.create({
